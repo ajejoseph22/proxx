@@ -6,8 +6,11 @@ export interface Metrics {
   }>;
 }
 
-export interface DBRecord {
-  url: string;
+export interface ProxyDBRecord {
   visits: number;
   bytesTransferred: number;
+}
+
+export interface AuthDBRecord {
+  passwordHash: string;
 }

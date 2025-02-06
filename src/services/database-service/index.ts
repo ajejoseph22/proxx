@@ -1,23 +1,36 @@
 import fs from "fs/promises";
 import path from "path";
 
-import { DBRecord, Metrics } from "../../types";
+import { ProxyDBRecord, AuthDBRecord } from "../../types";
+
+export interface DBSchema {
+  auth: Record<string, AuthDBRecord>;
+  metrics: Record<string, ProxyDBRecord>;
+}
+
+export interface IDatabaseService {
+  initialize(): Promise<void>;
+  save(data: DBSchema): Promise<void>;
+  getData(): DBSchema;
+}
+
+export class DatabaseError extends Error {
+  constructor(
+    message: string,
+    public readonly cause?: Error,
+  ) {
+    super(message);
+    this.name = "DatabaseError";
+  }
+}
 
 export class DatabaseService {
   private readonly dbPath: string;
-  private data: Record<string, DBRecord>;
+
+  private data: DBSchema = { auth: {}, metrics: {} };
 
   constructor() {
     this.dbPath = process.env.DB_PATH || path.join(__dirname, "db.json");
-    this.data = {};
-  }
-
-  private getDefaultRecord(url: string): DBRecord {
-    return {
-      url,
-      visits: 0,
-      bytesTransferred: 0,
-    };
   }
 
   async initialize(): Promise<void> {
@@ -35,42 +48,20 @@ export class DatabaseService {
       const fileContent = await fs.readFile(this.dbPath, "utf-8");
       this.data = JSON.parse(fileContent);
     } catch (error) {
-      console.error("Failed to initialize DB: ", error);
+      throw new DatabaseError("Failed to initialize DB", error as Error);
     }
   }
 
-  async save(): Promise<void> {
+  async save(data: DBSchema): Promise<void> {
     try {
-      await fs.writeFile(this.dbPath, JSON.stringify(this.data, null, 2));
+      await fs.writeFile(this.dbPath, JSON.stringify(data, null, 2));
+      this.data = data;
     } catch (error) {
-      console.error("Failed to save DB: ", error);
+      throw new DatabaseError("Failed to save DB", error as Error);
     }
   }
 
-  updateMetrics(url: string, bytes: number): void {
-    const record = this.data[url] || this.getDefaultRecord(url);
-    record.visits += 1;
-    record.bytesTransferred += bytes;
-    this.data[url] = record;
-  }
-
-  getMetrics(): Metrics {
-    let totalBytes = 0;
-    const sites: Record<string,  number> = {};
-
-    for (const [url, record] of Object.entries(this.data)) {
-      totalBytes += record.bytesTransferred;
-      sites[url] = record.visits;
-    }
-
-    const topSites = Object.entries(sites)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([url, visits]) => ({ url, visits }));
-
-    return {
-      bandwidth_usage: `${(totalBytes / (1024 * 1024)).toFixed(2)}MB`,
-      top_sites: topSites,
-    };
+  getData(): DBSchema {
+    return { ...this.data };
   }
 }
