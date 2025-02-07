@@ -8,6 +8,8 @@ import { MetricsService } from "./services/metrics-service";
 import { AuthService } from "./services/auth-service";
 import { DatabaseService } from "./services/database-service";
 
+type RequestWithBytes = http.IncomingMessage & { requestBytes?: number };
+
 export class ProxyServer {
   private readonly app: express.Application;
   private server: http.Server;
@@ -26,17 +28,16 @@ export class ProxyServer {
 
   private setupMiddleware(): void {
     this.app.use(async (req, res, next): Promise<any> => {
-      console.log("GETTING TO AUTHENTICATION");
       const authHeader = req.headers["proxy-authorization"];
 
       if (!authHeader) {
         res.setHeader("Proxy-Authenticate", "Basic");
-        return res.status(407).send("Proxy Authentication Required");
+        return res.status(407).send("Proxy Authentication Required\r\n\r\n");
       }
 
       const isAuthenticated = await this.authService.authenticate(authHeader);
       if (!isAuthenticated) {
-        return res.status(403).send("Invalid credentials");
+        return res.status(403).send("Invalid credentials\r\n\r\n");
       }
 
       next();
@@ -50,34 +51,36 @@ export class ProxyServer {
     const proxyMiddleware = createProxyMiddleware({
       target: "https://example.com",
       router: (req) => {
-        const url = new URL(req.url || "", `http://${req.headers.host}`);
-        const protocol = url.protocol;
-        const host = url.hostname;
-
         console.log(`Proxying request to: ${req.url}`);
-
-        if (protocol === "https:") {
-          return {
-            protocol: "https:",
-            host,
-          };
-        }
         return req.url;
       },
       changeOrigin: true,
-      secure: false,
-      ws: true,
-      // ssl: false,
       on: {
-        proxyRes: (proxyRes, req, res) => {
+        proxyReq: (_, req: RequestWithBytes, res) => {
+          let requestBytes = 0;
+
+          req.on("data", (chunk) => {
+            requestBytes += chunk.length;
+          });
+
+          req.on("end", async () => {
+            req.requestBytes = requestBytes;
+          });
+        },
+        proxyRes: (proxyRes, req: RequestWithBytes, res) => {
           const url = new URL(req.url || "", `http://${req.headers.host}`)
             .hostname;
-          let bytes = 0;
+          let responseBytes = 0;
+
           proxyRes.on("data", (chunk) => {
-            bytes += chunk.length;
+            responseBytes += chunk.length;
           });
+
           proxyRes.on("end", async () => {
-            await this.metricsService.updateMetrics(url, bytes);
+            console.log("Request bytes:", req.requestBytes);
+            console.log("Response bytes:", responseBytes);
+            const totalBytes = (req.requestBytes || 0) + responseBytes;
+            await this.metricsService.updateMetrics(url, totalBytes);
           });
         },
       },
@@ -99,13 +102,13 @@ export class ProxyServer {
       const authHeader = req.headers["proxy-authorization"];
 
       if (!authHeader) {
-        clientSocket.end("HTTP/1.1 407 Proxy Authentication Required \r\n\r\n");
+        clientSocket.end("HTTP/1.1 407 Proxy Authentication Required\r\n\r\n");
         return;
       }
 
       const isAuthenticated = await this.authService.authenticate(authHeader);
       if (!isAuthenticated) {
-        clientSocket.end("HTTP/1.1 403 Invalid credentials \r\n\r\n");
+        clientSocket.end("HTTP/1.1 403 Invalid credentials\r\n\r\n");
         return;
       }
 
@@ -130,6 +133,24 @@ export class ProxyServer {
         serverSocket.write(head);
         serverSocket.pipe(clientSocket);
         clientSocket.pipe(serverSocket);
+      });
+
+      let clientBytes = 0;
+      let serverBytes = 0;
+
+      clientSocket.on("data", (chunk) => {
+        clientBytes += chunk.length;
+      });
+
+      serverSocket.on("data", (chunk) => {
+        serverBytes += chunk.length;
+      });
+
+      clientSocket.on("end", async () => {
+        console.log("Client bytes:", clientBytes);
+        console.log("Server bytes:", serverBytes);
+        const totalBytes = clientBytes + serverBytes;
+        await this.metricsService.updateMetrics(hostname, totalBytes);
       });
 
       serverSocket.on("error", (err) => {
