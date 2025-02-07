@@ -21,7 +21,7 @@ A lightweight **proxy server** that supports **basic authentication** , **bandwi
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/proxx.git
+   git clone https://github.com/ajejoseph22/proxx.git
    cd proxx
     ```
 2. Install dependencies:
