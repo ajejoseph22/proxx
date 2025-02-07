@@ -42,11 +42,13 @@ export class DatabaseService {
 
       if (!dbFileExists) {
         console.log("Creating new DB file at ", this.dbPath);
-        await fs.writeFile(this.dbPath, "{}");
+        await fs.writeFile(this.dbPath, JSON.stringify(this.data, null, 2));
       }
 
       const fileContent = await fs.readFile(this.dbPath, "utf-8");
-      this.data = JSON.parse(fileContent);
+      if (!fileContent)
+        await fs.writeFile(this.dbPath, JSON.stringify(this.data, null, 2));
+      else this.data = JSON.parse(fileContent);
     } catch (error) {
       throw new DatabaseError("Failed to initialize DB", error as Error);
     }

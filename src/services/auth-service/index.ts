@@ -31,7 +31,7 @@ export class AuthService {
       .toString()
       .split(":");
 
-    const user = this.databaseService.getData().auth[username];
+    const user = this.databaseService.getData().auth?.[username];
     if (!user) return false;
 
     return bcrypt.compare(password, user.passwordHash);
