@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import merge from "lodash.merge";
 
 import { ProxyDBRecord, AuthDBRecord } from "../../types";
 
@@ -10,7 +11,7 @@ export interface DBSchema {
 
 export interface IDatabaseService {
   initialize(): Promise<void>;
-  save(data: DBSchema): Promise<void>;
+  save(data: Partial<DBSchema>): Promise<void>;
   getData(): DBSchema;
 }
 
@@ -54,10 +55,11 @@ export class DatabaseService {
     }
   }
 
-  async save(data: DBSchema): Promise<void> {
+  async save(data: Partial<DBSchema>): Promise<void> {
     try {
-      await fs.writeFile(this.dbPath, JSON.stringify(data, null, 2));
-      this.data = data;
+      const newData = merge({}, this.data, data);
+      await fs.writeFile(this.dbPath, JSON.stringify(newData, null, 2));
+      this.data = newData;
     } catch (error) {
       throw new DatabaseError("Failed to save DB", error as Error);
     }

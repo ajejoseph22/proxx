@@ -13,13 +13,13 @@ export class MetricsService {
   }
 
   async updateMetrics(url: string, bytes: number): Promise<void> {
-    const dbData = this.databaseService.getData();
-    const record = dbData.metrics[url] || this.defaultMetricRecord;
+    const metrics = this.databaseService.getData().metrics;
+    const record = metrics[url] || this.defaultMetricRecord;
     record.visits += 1;
     record.bytesTransferred += bytes;
-    dbData.metrics[url] = record;
+    metrics[url] = record;
 
-    await this.databaseService.save(dbData);
+    await this.databaseService.save({ metrics });
   }
 
   getAllMetrics(): Metrics {

@@ -18,12 +18,12 @@ export class AuthService {
 
   private async addUser(username: string, password: string): Promise<void> {
     const salt = await bcrypt.genSalt(10);
-    const dbData = this.databaseService.getData();
-    dbData.auth[username] = {
+    const auth = this.databaseService.getData().auth;
+    auth[username] = {
       passwordHash: await bcrypt.hash(password, salt),
     };
 
-    await this.databaseService.save(dbData);
+    await this.databaseService.save({ auth });
   }
 
   private async authenticate(authHeader: string): Promise<boolean> {
@@ -31,8 +31,8 @@ export class AuthService {
     if (method !== "Basic") return false;
 
     const [username, password] = Buffer.from(credentials, "base64")
-        .toString()
-        .split(":");
+      .toString()
+      .split(":");
 
     const user = this.databaseService.getData().auth?.[username];
     if (!user) return false;
