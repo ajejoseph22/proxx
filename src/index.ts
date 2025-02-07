@@ -20,7 +20,7 @@ async function main() {
       });
       break;
     default:
-      console.log("Usage: proxx [start <port>|stop]");
+      console.log("Usage: proxx [start <port>]");
       process.exit(1);
   }
 }
