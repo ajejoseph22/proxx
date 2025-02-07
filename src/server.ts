@@ -10,12 +10,13 @@ import { DatabaseService } from "./services/database-service";
 
 type RequestWithBytes = http.IncomingMessage & { requestBytes?: number };
 
-export class ProxyServer {
+export class Proxx {
   private readonly app: express.Application;
   private server: http.Server;
   private readonly dbService: DatabaseService;
   private readonly metricsService: MetricsService;
   private authService: AuthService;
+  private endpointPaths: string[];
 
   constructor(private port: number) {
     this.app = express();
@@ -23,70 +24,81 @@ export class ProxyServer {
     this.dbService = new DatabaseService();
     this.metricsService = new MetricsService(this.dbService);
     this.authService = new AuthService(this.dbService);
+    this.endpointPaths = ["/metrics"];
     this.setupMiddleware();
+    this.setupEndpoints();
+    this.setupProxy();
+  }
+
+  private isProxyRequest(req: express.Request): boolean {
+    return !this.endpointPaths.includes(req.url);
   }
 
   private setupMiddleware(): void {
-    this.app.use(async (req, res, next): Promise<any> => {
-      const authHeader = req.headers["proxy-authorization"];
+    this.app.use(async (req, res, next) => {
+      const isProxy = this.isProxyRequest(req);
 
-      if (!authHeader) {
-        res.setHeader("Proxy-Authenticate", "Basic");
-        return res.status(407).send("Proxy Authentication Required\r\n\r\n");
-      }
+      const { isAuthenticated, message, code } = isProxy
+        ? await this.authService.proxyAuth(req, res)
+        : await this.authService.endpointAuth(req, res);
 
-      const isAuthenticated = await this.authService.authenticate(authHeader);
       if (!isAuthenticated) {
-        return res.status(403).send("Invalid credentials\r\n\r\n");
+        res.status(code).send(message);
+        return;
       }
 
       next();
     });
+  }
 
-    this.app.get("/metrics", (req, res) => {
+  private setupProxy(): void {
+    this.app.use(
+      "/",
+      createProxyMiddleware({
+        target: "https://example.com",
+        router: (req) => {
+          console.log(`Proxying request to: ${req.url}`);
+          return req.url;
+        },
+        changeOrigin: true,
+        on: {
+          proxyReq: (_, req: RequestWithBytes, res) => {
+            let requestBytes = 0;
+
+            req.on("data", (chunk) => {
+              requestBytes += chunk.length;
+            });
+
+            req.on("end", async () => {
+              req.requestBytes = requestBytes;
+            });
+          },
+          proxyRes: (proxyRes, req: RequestWithBytes, res) => {
+            const url = new URL(req.url || "", `http://${req.headers.host}`)
+              .hostname;
+            let responseBytes = 0;
+
+            proxyRes.on("data", (chunk) => {
+              responseBytes += chunk.length;
+            });
+
+            proxyRes.on("end", async () => {
+              console.log("Request bytes:", req.requestBytes);
+              console.log("Response bytes:", responseBytes);
+              const totalBytes = (req.requestBytes || 0) + responseBytes;
+              await this.metricsService.updateMetrics(url, totalBytes);
+            });
+          },
+        },
+      }),
+    );
+  }
+
+  private setupEndpoints(): void {
+    this.app.get("/metrics", (_, res) => {
       const metrics = this.metricsService.getAllMetrics();
       res.json(metrics);
     });
-
-    const proxyMiddleware = createProxyMiddleware({
-      target: "https://example.com",
-      router: (req) => {
-        console.log(`Proxying request to: ${req.url}`);
-        return req.url;
-      },
-      changeOrigin: true,
-      on: {
-        proxyReq: (_, req: RequestWithBytes, res) => {
-          let requestBytes = 0;
-
-          req.on("data", (chunk) => {
-            requestBytes += chunk.length;
-          });
-
-          req.on("end", async () => {
-            req.requestBytes = requestBytes;
-          });
-        },
-        proxyRes: (proxyRes, req: RequestWithBytes, res) => {
-          const url = new URL(req.url || "", `http://${req.headers.host}`)
-            .hostname;
-          let responseBytes = 0;
-
-          proxyRes.on("data", (chunk) => {
-            responseBytes += chunk.length;
-          });
-
-          proxyRes.on("end", async () => {
-            console.log("Request bytes:", req.requestBytes);
-            console.log("Response bytes:", responseBytes);
-            const totalBytes = (req.requestBytes || 0) + responseBytes;
-            await this.metricsService.updateMetrics(url, totalBytes);
-          });
-        },
-      },
-    });
-
-    this.app.use("/", proxyMiddleware);
   }
 
   async start(): Promise<void> {
@@ -99,16 +111,12 @@ export class ProxyServer {
 
     // Handle HTTPS tunneling (CONNECT requests)
     this.server.on("connect", async (req, clientSocket, head) => {
-      const authHeader = req.headers["proxy-authorization"];
+      const { isAuthenticated, message, code } =
+        await this.authService.tunnelAuth(req);
 
-      if (!authHeader) {
-        clientSocket.end("HTTP/1.1 407 Proxy Authentication Required\r\n\r\n");
-        return;
-      }
-
-      const isAuthenticated = await this.authService.authenticate(authHeader);
       if (!isAuthenticated) {
-        clientSocket.end("HTTP/1.1 403 Invalid credentials\r\n\r\n");
+        clientSocket.write(`HTTP/1.1 ${code} ${message}`);
+        clientSocket.end();
         return;
       }
 

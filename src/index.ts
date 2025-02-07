@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 
 import "dotenv/config";
-import { ProxyServer } from "./server";
+import { Proxx } from "./server";
 
 const command = process.argv[2];
 const port = parseInt(process.argv[3]) || 3000;
-let proxyServer: ProxyServer;
+let proxyServer: Proxx;
 
 async function main() {
   switch (command) {
     case "start":
       console.log(`Starting Proxx...`);
-      proxyServer = new ProxyServer(port);
+      proxyServer = new Proxx(port);
       await proxyServer.start();
 
       process.on("SIGINT", async () => {
