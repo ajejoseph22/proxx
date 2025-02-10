@@ -2,17 +2,20 @@
   "name": "proxx",
   "version": "1.0.0",
   "main": "index.ts",
+  "repository": "https://github.com/ajejoseph22/proxx.git",
   "scripts": {
-    "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc --noEmit",
     "format": "prettier --write .",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "start": "ts-node dist/index.js"
+    "start": "ts-node src/index.ts"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["proxy", "server", "https", "http"],
+  "author": "Joseph Aje",
   "license": "ISC",
-  "description": "",
+  "description": "A lightweight HTTPS/HTTP proxy server with bandwidth tracking, basic auth and real-time analytics.",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/express": "^5.0.0",
@@ -26,6 +29,8 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "http-proxy-middleware": "^3.0.3",
-    "lodash.merge": "^4.6.2"
+    "lodash.merge": "^4.6.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
   }
 }

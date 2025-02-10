@@ -35,12 +35,15 @@ A lightweight **proxy server** that supports **basic authentication** , **bandwi
    cp .env.example .env
    ```
    
-4. Start the server:
-
+4. Start the server:\
+In dev mode:
+   ```bash
+    npm run dev start <port>
+    ``` 
+   Or in production mode:
    ```bash
     npm start start <port>
-    ```
-
+    ``` 
 ## Usage
 
 1. To use the proxy, configure your client or use curl with authentication:
