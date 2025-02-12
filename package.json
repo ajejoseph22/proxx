@@ -13,7 +13,12 @@
   "bin": {
     "proxx": "./dist/bin/proxx.js"
   },
-  "keywords": ["proxy", "server", "https", "http"],
+  "keywords": [
+    "proxy",
+    "server",
+    "https",
+    "http"
+  ],
   "author": "Joseph Aje",
   "license": "ISC",
   "description": "A lightweight HTTPS/HTTP proxy server with bandwidth tracking, basic auth and real-time analytics.",

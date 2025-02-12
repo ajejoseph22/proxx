@@ -1,59 +1,54 @@
-# Proxx
+# **Proxx**
 
-A lightweight **proxy server** that supports **basic authentication** , **bandwidth tracking** and **site analytics**. It works with both **HTTP & HTTPS** traffic and provides real-time metrics via an endpoint.
+A lightweight **proxy server** that supports **basic authentication**, **bandwidth tracking**, and **site analytics**. It works with both **HTTP & HTTPS** traffic and provides real-time metrics via an endpoint.
 
-## Features
+## **Features**
 
-- **Basic Authentication** using username/password
-- **Bandwidth Tracking** (data sent/received)
-- **Site Analytics** (aggregated statistics)
-- **Real-time Metrics** for real-time analytics
-- **Graceful Shutdown** showing total usage statistics
+- 🔑 **Basic Authentication** using username/password
+- 📊 **Bandwidth Tracking** (data sent/received)
+- 📈 **Site Analytics** (aggregated statistics)
+- 🚀 **Real-time Metrics** for live analytics
+- 🔄 **Graceful Shutdown** showing total usage statistics
 
-## Installation
+---
 
-### Prerequisites
+## **Installation**
+
+### **Prerequisites**
+
 - Node.js (v18+ recommended)
 - npm or yarn
 
-### Setup
+### **Install via npm**
 
-1. Clone the repository:
+You can install Proxx directly via npm:
 
-   ```bash
-   git clone https://github.com/ajejoseph22/proxx.git
-   cd proxx
-    ```
-2. Install dependencies:
-    
-   ```bash
-   npm install
-   ```
-3. Generate an environment file:
-
-   ```bash
-   cp .env.example .env
-   ```
-   
-4. Start the server:\
-In dev mode:
-   ```bash
-    npm run dev start <port>
-    ``` 
-   Or in production mode:
-   ```bash
-    npm start start <port>
-    ``` 
-## Usage
-
-1. To use the proxy, configure your client or use curl with authentication:
 ```bash
-  curl -x http://localhost:<port> --proxy-user <your_username>:<your_password> -L http://example.com 
+npm install -g @ajejoseph22/proxx
 ```
 
-2. To view real-time metrics, visit or curl the following URL like so:
+### **Using the Proxy**
+1. set your admin username and password
 ```bash
-  curl -u <your_username>:<your_password> http://localhost:<port>/metrics
+export ADMIN_USERNAME=username
+export ADMIN_PASSWORD=password
+```
+
+2. start the proxy server
+```bash
+proxx start <port>
+```
+
+3. configure your client to use the proxy, or use curl with authentication:
+
+```bash
+curl -x http://localhost:<port> -U username:password http://example.com
+```
+
+4. view the real-time metrics at `/metrics`:
+
+```bash
+curl -x http://localhost:<port> -U username:password http://localhost:<port>/metrics
 ```
 
 Example response
