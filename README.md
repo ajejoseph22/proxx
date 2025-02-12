@@ -48,7 +48,7 @@ curl -x http://localhost:<port> -U username:password http://example.com
 4. view the real-time metrics at `/metrics`:
 
 ```bash
-curl -x http://localhost:<port> -U username:password http://localhost:<port>/metrics
+curl -u <your_username>:<your_password> http://localhost:<port>/metrics
 ```
 
 Example response
