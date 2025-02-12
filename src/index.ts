@@ -7,7 +7,7 @@ const command = process.argv[2];
 const port = parseInt(process.argv[3]) || 3000;
 let proxyServer: Proxx;
 
-async function main() {
+export async function initProxy() {
   switch (command) {
     case "start":
       console.log(`Starting Proxx...`);
@@ -24,5 +24,3 @@ async function main() {
       process.exit(1);
   }
 }
-
-main().catch(console.error);

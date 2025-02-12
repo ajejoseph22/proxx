@@ -1,0 +1,17 @@
+name: CI
+
+on: [pull_request]
+
+jobs:
+  run-tests:
+    name: Lint and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: volta-cli/action@v1
+      - run: npm i
+      - run: npm run format
+      - run: npm run build
+        env:
+          CI: true

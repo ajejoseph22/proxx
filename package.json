@@ -4,10 +4,14 @@
   "main": "index.ts",
   "repository": "https://github.com/ajejoseph22/proxx.git",
   "scripts": {
-    "build": "tsc --noEmit",
+    "build": "rm -rf dist/ && tsc --outDir dist",
     "format": "prettier --write .",
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "start": "ts-node src/index.ts"
+    "dev": "ts-node-dev --respawn --transpile-only bin/proxx.ts",
+    "prestart": "npm run build",
+    "start": "node dist/bin/proxx.js"
+  },
+  "bin": {
+    "proxx": "./dist/bin/proxx.js"
   },
   "keywords": ["proxy", "server", "https", "http"],
   "author": "Joseph Aje",
