@@ -42,7 +42,7 @@ proxx start <port>
 3. configure your client to use the proxy, or use curl with authentication:
 
 ```bash
-curl -x http://localhost:<port> -U username:password http://example.com
+curl -x http://localhost:<port> --proxy-user username:password -L <http://url>
 ```
 
 4. view the real-time metrics at `/metrics`:
