@@ -12,11 +12,11 @@ type RequestWithBytes = http.IncomingMessage & { requestBytes?: number };
 
 export class Proxx {
   private readonly app: express.Application;
-  private server: http.Server;
   private readonly dbService: DatabaseService;
   private readonly metricsService: MetricsService;
-  private authService: AuthService;
-  private endpointPaths: string[];
+  private readonly authService: AuthService;
+  private readonly endpointPaths: string[];
+  private server: http.Server;
 
   constructor(private port: number) {
     this.app = express();
@@ -36,9 +36,7 @@ export class Proxx {
 
   private setupMiddleware(): void {
     this.app.use(async (req, res, next) => {
-      const isProxy = this.isProxyRequest(req);
-
-      const { isAuthenticated, message, code } = isProxy
+      const { isAuthenticated, message, code } = this.isProxyRequest(req)
         ? await this.authService.proxyAuth(req, res)
         : await this.authService.endpointAuth(req, res);
 
@@ -112,7 +110,7 @@ export class Proxx {
     // Handle HTTPS tunneling (CONNECT requests)
     this.server.on("connect", async (req, clientSocket, head) => {
       const { isAuthenticated, message, code } =
-        await this.authService.tunnelAuth(req);
+        await this.authService.proxyAuth(req);
 
       if (!isAuthenticated) {
         clientSocket.write(`HTTP/1.1 ${code} ${message}`);
